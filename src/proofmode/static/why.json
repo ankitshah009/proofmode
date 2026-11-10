@@ -1,0 +1,29 @@
+{
+  "headline": "Impersonation is the most reported fraud, so check the message first.",
+  "points": [
+    {
+      "stat": "$3.5 billion",
+      "text": "People reported losing $3.5 billion to imposter scams in 2025, with reported losses increasing nearly three times since 2020.",
+      "source_name": "FTC",
+      "source_url": "https://www.ftc.gov/news-events/news/press-releases/2026/06/ftc-data-show-people-reported-losing-3-point-5-billion-imposter-scams-2025"
+    },
+    {
+      "stat": "Nearly 1 in 3",
+      "text": "Imposter scams were reported more than any other fraud category in 2025, making up nearly one in three fraud reports.",
+      "source_name": "FTC",
+      "source_url": "https://www.ftc.gov/news-events/news/press-releases/2026/06/ftc-data-show-people-reported-losing-3-point-5-billion-imposter-scams-2025"
+    },
+    {
+      "stat": "Nearly $1 billion",
+      "text": "In 2025 people reported losing nearly $1 billion to scammers posing as businesses, up from $866 million in 2024, with the highest losses to bank impersonators.",
+      "source_name": "FTC",
+      "source_url": "https://www.ftc.gov/news-events/news/press-releases/2026/06/ftc-data-show-people-reported-losing-3-point-5-billion-imposter-scams-2025"
+    },
+    {
+      "stat": "Never",
+      "text": "FTC consumer guidance, as read in 2026, says no real business or government agency will ever tell you to buy a gift card to pay them.",
+      "source_name": "FTC Consumer Advice",
+      "source_url": "https://consumer.ftc.gov/articles/gift-card-scams"
+    }
+  ]
+}

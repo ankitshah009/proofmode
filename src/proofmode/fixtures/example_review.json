@@ -1,0 +1,52 @@
+{
+  "claims": [
+    {
+      "claim_text": "Tidewater Cloud Billing <billing@tidewater-accounts.co>",
+      "status": "contradicted",
+      "source_ids": ["S4"],
+      "evidence_quotes": ["Official messages are sent only from tidewater.example"],
+      "explanation": "The sender address uses tidewater-accounts.co, but S4 says official messages are sent only from tidewater.example.",
+      "correction": "Official messages are sent only from tidewater.example."
+    },
+    {
+      "claim_text": "Your API credits expire in 24 hours.",
+      "status": "contradicted",
+      "source_ids": ["S1"],
+      "evidence_quotes": ["Tidewater Cloud credits do not expire."],
+      "explanation": "The message sets an expiry deadline, but S1 says credits do not expire.",
+      "correction": "Tidewater Cloud credits do not expire."
+    },
+    {
+      "claim_text": "Pay a $49 reactivation fee to keep your account.",
+      "status": "contradicted",
+      "source_ids": ["S2"],
+      "evidence_quotes": ["Tidewater Cloud never charges a reactivation fee."],
+      "explanation": "The message demands a reactivation fee, but S2 says no such fee is ever charged.",
+      "correction": "Tidewater Cloud never charges a reactivation fee."
+    },
+    {
+      "claim_text": "We accept gift cards for faster processing.",
+      "status": "contradicted",
+      "source_ids": ["S3"],
+      "evidence_quotes": ["gift cards are never accepted"],
+      "explanation": "The message offers payment by gift card, but S3 limits payment to card or bank transfer.",
+      "correction": "Payments are by card or bank transfer only; gift cards are never accepted."
+    },
+    {
+      "claim_text": "Verify now at tidewater-accounts.co",
+      "status": "contradicted",
+      "source_ids": ["S4"],
+      "evidence_quotes": ["link only to tidewater.example"],
+      "explanation": "The message links to tidewater-accounts.co, but S4 says official messages link only to tidewater.example.",
+      "correction": "Official messages link only to tidewater.example."
+    },
+    {
+      "claim_text": "Support is available 24/7.",
+      "status": "supported",
+      "source_ids": ["S5"],
+      "evidence_quotes": ["Support is available 24 hours a day, 7 days a week."],
+      "explanation": "S5 confirms that support is available around the clock.",
+      "correction": ""
+    }
+  ]
+}

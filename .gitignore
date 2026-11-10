@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+
+# Editor and OS
+.DS_Store
+.idea/
+.vscode/
+.vercel
+.env*
+
+demo/remotion/node_modules
+
+# Local run and video working files
+.dev-server.log
+demo/hyperframes/
+demo/remotion/
+demo/*-edits.mp4
+demo/*-v2.mp4
+scripts/record_demo.py
+demo/

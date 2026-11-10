@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+/*
+ * Single dark theme. Warm off-black surfaces with one vermilion accent, all in
+ * OKLCH. Text and control colours are chosen to meet WCAG AA on these surfaces.
+ */
+:root {
+  color-scheme: dark;
+  --background: oklch(0.16 0.008 60);
+  --foreground: oklch(0.94 0.012 80);
+  --card: oklch(0.205 0.009 60);
+  --raised: oklch(0.25 0.01 60);
+  --muted-foreground: oklch(0.76 0.015 75);
+  --primary: oklch(0.66 0.2 35);
+  --primary-foreground: oklch(0.14 0.01 40);
+  /* A lighter vermilion for small accent text, which needs more contrast than large type. */
+  --accent-text: oklch(0.74 0.17 38);
+  --success: oklch(0.8 0.09 150);
+  --border: oklch(0.3 0.01 60);
+  --input: oklch(0.42 0.012 60);
+  --ring: oklch(0.74 0.17 38);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-raised: var(--raised);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-padding-top: 16px;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+}
+
+@layer components {
+  .mono-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .hint {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--muted-foreground);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--foreground);
+    background-color: var(--raised);
+    border: 1px solid var(--input);
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+      background-color 0.15s var(--ease),
+      border-color 0.15s var(--ease),
+      transform 0.15s var(--ease);
+  }
+
+  .btn:hover:not(:disabled) {
+    border-color: var(--muted-foreground);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    color: var(--primary-foreground);
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--accent-text);
+    border-color: var(--accent-text);
+  }
+
+  .field {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--foreground);
+    background-color: var(--card);
+    border: 1px solid var(--input);
+    border-radius: 8px;
+  }
+
+  .field::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  .text-link {
+    color: var(--foreground);
+    text-decoration: underline;
+    text-decoration-color: var(--primary);
+    text-underline-offset: 3px;
+  }
+
+  .text-link:hover {
+    color: var(--accent-text);
+  }
+
+  .skeleton-bar {
+    display: block;
+    height: 14px;
+    border-radius: 4px;
+    background-color: var(--raised);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  .reveal {
+    animation: rise 0.45s var(--ease) both;
+  }
+
+  /* Staggered reveal without inline styles, which the Content-Security-Policy forbids. */
+  .reveal:nth-child(2) { animation-delay: 70ms; }
+  .reveal:nth-child(3) { animation-delay: 140ms; }
+  .reveal:nth-child(4) { animation-delay: 210ms; }
+  .reveal:nth-child(5) { animation-delay: 280ms; }
+  .reveal:nth-child(6) { animation-delay: 350ms; }
+  .reveal:nth-child(7) { animation-delay: 420ms; }
+  .reveal:nth-child(8) { animation-delay: 490ms; }
+  .reveal:nth-child(9) { animation-delay: 560ms; }
+  .reveal:nth-child(10) { animation-delay: 630ms; }
+  .reveal:nth-child(n + 11) { animation-delay: 700ms; }
+
+  .skeleton-bar {
+    animation: pulse 1.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pulse {
+    from {
+      opacity: 0.45;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

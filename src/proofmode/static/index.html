@@ -1,0 +1,1408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="ProofMode checks a screenshot of a suspicious message against common scam red flags, or against the official facts of the organisation it claims to come from.">
+<link rel="icon" href="data:,">
+<title>ProofMode</title>
+<style>
+:root {
+  --bg: #0f0e0c;
+  --surface: #181613;
+  --surface-2: #23201b;
+  --line: #3a352d;
+  --ink: #f1ece2;
+  --ink-2: #c6bfb2;
+  --ink-3: #a0988a;
+  --accent: #ff6b4a;
+  --accent-wash: rgba(255, 107, 74, 0.1);
+  --radius: 6px;
+  --gutter: 16px;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+.wrap { width: 100%; max-width: 1240px; margin: 0 auto; padding: 20px var(--gutter) 40px; }
+
+/* Opening */
+.top { padding-bottom: 28px; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 24px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+.topnav { min-width: 0; max-width: 100%; }
+.topnav ul { position: relative; display: flex; gap: 0 20px; margin: 0; padding: 0; list-style: none; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+.topnav ul::-webkit-scrollbar { display: none; }
+.topnav a:focus-visible { outline-offset: -3px; }
+.topnav a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--ink-2); text-decoration: none; }
+.topnav a:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.brand { margin: 0; font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); }
+.brand b { font-weight: 600; color: var(--accent); }
+h1 { margin: 0; font-family: var(--serif); font-size: clamp(40px, 6vw, 76px); font-weight: 400; line-height: 1; letter-spacing: -0.02em; }
+h1 em { font-style: italic; color: var(--accent); }
+.lede { max-width: 62ch; margin: 14px 0 0; font-size: 18px; color: var(--ink-2); }
+.notice { margin: 0 0 20px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: var(--radius); }
+
+/* Shared type */
+h2, h3, p { overflow-wrap: anywhere; }
+.mono-label { margin: 0 0 10px; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.field-label { display: block; font-size: 15px; font-weight: 600; color: var(--ink); }
+.hint { margin: 6px 0 0; font-size: 14px; color: var(--ink-3); }
+.tag { display: inline-block; padding: 3px 9px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 3px; color: var(--ink-2); }
+
+/* Tool layout */
+.tool { display: grid; gap: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
+.stage, .work { min-width: 0; }
+
+.drop {
+  display: grid; place-content: center; gap: 6px; aspect-ratio: 16 / 9; padding: 16px;
+  text-align: center; background: var(--surface); border: 2px dashed var(--ink-3); border-radius: var(--radius); cursor: pointer;
+}
+.drop-title { font-family: var(--serif); font-size: 28px; line-height: 1.15; color: var(--ink); }
+.drop .hint { margin: 0; }
+.drop:hover, .stage.is-over .drop { border-color: var(--accent); background: var(--surface-2); }
+#image-input:focus-visible + .drop { outline: 3px solid var(--accent); outline-offset: 3px; }
+/* Once a screenshot is showing, the same control shrinks to a button for replacing it. */
+.drop.is-compact {
+  display: inline-flex; align-items: center; aspect-ratio: auto; min-height: 44px; margin-bottom: 12px; padding: 10px 18px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.drop.is-compact .drop-title { font-family: var(--sans); font-size: 15px; font-weight: 600; }
+.drop.is-compact .hint { display: none; }
+.stage.is-over .drop.is-compact { border-color: var(--accent); }
+
+.shot { position: relative; margin: 0; }
+.shot img { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.shot figcaption { margin-bottom: 8px; }
+
+.handling { margin: 10px 0 0; font-size: 14px; color: var(--ink-3); }
+.example { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
+.example .hint { flex: 1 1 220px; margin: 0; }
+
+/* What the message is checked against */
+.modes { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.mode {
+  display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 10px 14px; font-size: 15px; font-weight: 600;
+  color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer;
+}
+.mode input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.mode:hover { border-color: var(--ink-3); }
+.mode:has(input:checked) { color: var(--ink); background: var(--accent-wash); border-color: var(--accent); }
+.mode:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 3px; }
+.mode input:focus-visible { outline: none; }
+.panel { margin-top: 14px; }
+.panel > .hint:first-child { margin-top: 0; }
+.rule-list { display: grid; gap: 5px; margin: 10px 0 0; padding-left: 1.5em; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.rule-source { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; margin: 4px 0 0; font-size: 14px; color: var(--ink-3); }
+.rule-source a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.rule-source a:hover { color: var(--accent); }
+
+textarea {
+  display: block; width: 100%; min-height: 150px; margin-top: 8px; padding: 12px 14px; font: inherit; font-size: 15px;
+  line-height: 1.5; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); resize: vertical;
+}
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
+.actions:not(:has(> :not([hidden]))) { display: none; }
+.actions .hint { flex: 1 1 220px; margin: 0; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; font: inherit; font-size: 15px;
+  font-weight: 600; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; transition: transform 0.15s var(--ease);
+}
+.btn-primary { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.btn:hover:not(:disabled) { filter: brightness(1.12); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.status { margin: 10px 0 12px; font-size: 15px; color: var(--ink-2); }
+.status:empty { display: none; }
+.error { margin: 10px 0 12px; scroll-margin: 16px 0; padding: 12px 14px; font-size: 15px; color: var(--ink); background: var(--accent-wash); border: 1px solid var(--accent); border-radius: var(--radius); }
+
+/* Trust and safety */
+.trust { margin-top: 40px; padding: 0 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.trust summary { display: flex; align-items: center; gap: 10px; min-height: 48px; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; list-style: none; }
+.trust summary::-webkit-details-marker { display: none; }
+.trust summary::before { content: "+"; flex: none; width: 1em; font-family: var(--mono); color: var(--accent); text-align: center; }
+.trust[open] summary::before { content: "-"; }
+.trust ul { display: grid; gap: 6px; max-width: 80ch; margin: 0; padding: 0 0 16px 1.2em; font-size: 15px; color: var(--ink-2); }
+
+/* Facts as checked */
+.checked-facts { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.fact-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.fact-list li { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 8px; padding: 8px 10px; font-size: 15px; color: var(--ink-2); border: 1px solid transparent; border-radius: var(--radius); scroll-margin: 96px 0; }
+.fact-id { font-family: var(--mono); font-size: 13px; line-height: 1.75; color: var(--ink-3); }
+.fact-list li.is-cited { color: var(--ink); background: var(--accent-wash); border-color: var(--accent); }
+.fact-list li.is-cited .fact-id { color: var(--accent); font-weight: 600; }
+.fact-list li.is-cited .fact-id::after { content: " cited"; }
+
+/* Results */
+.results { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
+.results-title { margin: 0; font-family: var(--serif); font-size: 32px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; }
+.results-title:focus { outline: none; }
+.summary { margin: 6px 0 0; font-size: 15px; color: var(--ink-2); }
+
+.verdict { margin: 16px 0 0; padding: 16px 18px; scroll-margin: 16px 0; background: var(--surface); border: 2px solid var(--ink-2); border-radius: var(--radius); }
+.verdict:empty { display: none; }
+.verdict:focus { outline: none; }
+.verdict-title { margin: 0; font-family: var(--serif); font-size: 32px; line-height: 1.1; letter-spacing: -0.01em; }
+.verdict-detail { margin: 8px 0 0; font-size: 15px; color: var(--ink-2); }
+.verdict.is-danger { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.verdict.is-danger .verdict-detail { color: var(--bg); font-weight: 600; }
+.verdict.is-open { border-style: dashed; border-color: var(--ink-3); }
+
+.tally { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.tally > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 4px; min-width: 0; padding: 14px 12px 12px; }
+.tally > div + div { border-left: 1px solid var(--line); }
+.tally dt { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--ink-2); }
+.tally dd { margin: 0; font-family: var(--serif); font-size: clamp(44px, 9vw, 68px); line-height: 0.95; font-variant-numeric: tabular-nums lining-nums; color: var(--ink); }
+.tally .is-contradicted dd { color: var(--accent); }
+.tally .is-zero dd { color: var(--ink-3); }
+
+.pair { display: grid; gap: 16px; margin-top: 20px; }
+
+/* What the official facts say */
+.after { min-width: 0; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius); }
+.after h3 { margin: 0; font-family: var(--serif); font-size: 22px; font-weight: 400; line-height: 1.2; }
+.after-lines { margin: 12px 0 0; padding: 0; list-style: none; }
+.after-lines li { padding: 12px 0; border-top: 1px solid var(--line); }
+.was { display: block; font-size: 15px; color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
+.now { display: block; font-family: var(--serif); font-size: 22px; line-height: 1.25; color: var(--ink); text-decoration: none; }
+.flag { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.flag-bad { color: var(--accent); }
+.flag-open { padding: 2px 8px; border: 1px dashed var(--ink-3); border-radius: 3px; }
+.tick { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Verdict cards */
+.claims { display: grid; gap: 14px; margin: 20px 0 0; padding: 0; list-style: none; }
+.card { min-width: 0; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.card-head .mono-label { margin: 0; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 13px; font-weight: 700; line-height: 1.3; border: 1px solid var(--ink-2); border-radius: 3px; color: var(--ink); }
+.badge-contradicted { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.badge-insufficient, .badge-unknown { border-style: dashed; color: var(--ink-2); }
+.claim-text { margin: 12px 0 0; font-family: var(--serif); font-size: 24px; font-weight: 400; line-height: 1.25; }
+.card.is-contradicted .claim-text { text-decoration: line-through; text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
+.explanation { margin: 8px 0 0; color: var(--ink-2); }
+.card .mono-label { margin-top: 16px; margin-bottom: 6px; }
+blockquote { margin: 8px 0 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--ink-3); color: var(--ink); }
+blockquote p { margin: 0; }
+blockquote footer, .sources { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 2px 0 0; font-size: 13px; color: var(--ink-3); }
+.src {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 10px; font-family: var(--mono); font-size: 13px;
+  font-weight: 600; color: var(--accent); background: transparent; border: 0; border-radius: var(--radius); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.src:hover { background: var(--accent-wash); }
+.correction { margin: 0; font-family: var(--serif); font-size: 20px; line-height: 1.3; }
+.next-step { margin: 12px 0 0; font-size: 15px; color: var(--ink-2); }
+.notes { margin: 0; padding-left: 1.4em; font-size: 14px; color: var(--ink-2); }
+.notes-block { margin-top: 20px; }
+.again { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; }
+.again .hint { margin: 0; }
+
+.skeleton { display: grid; gap: 10px; }
+.bar { display: block; width: 100%; height: 14px; border-radius: 4px; background: var(--surface-2); }
+.bar-short { width: 30%; }
+.bar-long { width: 80%; }
+
+/* What the product does: static explanation */
+.explain { margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+.explain-title { margin: 0; font-family: var(--serif); font-size: 32px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; }
+.explain-lead { max-width: 72ch; margin: 8px 0 0; font-size: 15px; color: var(--ink-2); }
+
+.flow { display: grid; margin: 18px 0 0; padding: 0; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.flow li { min-width: 0; padding: 14px 16px 16px; }
+.flow li + li { border-top: 1px solid var(--line); }
+.flow li.is-model { background: var(--accent-wash); }
+.flow-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.flow-n { font-family: var(--serif); font-size: 32px; line-height: 1; color: var(--ink-3); }
+.flow li.is-model .flow-n { color: var(--accent); }
+.who { display: inline-block; padding: 3px 9px; font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; border: 1px dashed var(--ink-3); border-radius: 3px; color: var(--ink-2); }
+.who-model { color: var(--bg); background: var(--accent); border: 1px solid var(--accent); }
+.who-code { color: var(--ink); border: 1px solid var(--ink); }
+.flow-title { margin: 10px 0 0; font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ink); }
+.flow-text { margin: 4px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+
+.hard { margin: 18px 0 0; padding: 0; list-style: none; }
+.hard li { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 8px 10px; min-width: 0; padding: 16px 0; border-top: 1px solid var(--line); }
+.hard-n { font-family: var(--serif); font-size: 32px; line-height: 1; color: var(--accent); }
+.hard-problem h3 { margin: 0; font-family: var(--serif); font-size: 22px; font-weight: 400; line-height: 1.2; color: var(--ink); }
+.hard-problem p { margin: 6px 0 0; font-size: 15px; color: var(--ink-3); }
+.hard-answer { grid-column: 2; min-width: 0; padding-left: 14px; border-left: 2px solid var(--accent); }
+.hard-answer .mono-label { margin: 0 0 4px; color: var(--accent); }
+.hard-answer p:last-child { margin: 0; font-size: 15px; color: var(--ink); }
+
+.compare-wrap { margin-top: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.compare { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; line-height: 1.45; }
+.compare caption { padding: 12px 10px; font-size: 14px; color: var(--ink-3); text-align: left; }
+.compare th, .compare td { padding: 12px 10px; text-align: left; vertical-align: top; border-top: 1px solid var(--line); }
+.compare thead th { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.compare thead th:first-child { width: 27%; }
+.compare tbody th { font-weight: 600; color: var(--ink-3); }
+.compare td { color: var(--ink-2); }
+.compare .is-ours { color: var(--ink); background: var(--accent-wash); }
+.compare thead .is-ours { color: var(--accent); }
+.limits { max-width: 88ch; margin: 14px 0 0; font-size: 14px; color: var(--ink-2); }
+.limits b { color: var(--ink); }
+
+.guards { display: grid; gap: 0; margin: 18px 0 0; padding: 0; list-style: none; }
+.guards li { min-width: 0; padding: 14px 0 12px; border-top: 1px solid var(--line); }
+.guards h3 { margin: 0; font-family: var(--serif); font-size: 22px; font-weight: 400; line-height: 1.2; }
+.guards p { margin: 6px 0 0; font-size: 15px; color: var(--ink-2); }
+
+/* Why this matters */
+.why { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+.why-headline { max-width: 26ch; margin: 0; font-family: var(--serif); font-size: clamp(30px, 4vw, 48px); line-height: 1.08; letter-spacing: -0.01em; }
+.why-points { margin: 24px 0 0; padding: 0; list-style: none; }
+.why-points li { display: grid; gap: 6px; min-width: 0; padding: 18px 0 10px; border-top: 1px solid var(--line); }
+.why-stat { margin: 0; font-family: var(--serif); font-size: 32px; line-height: 1.1; color: var(--accent); }
+.why-text { max-width: 64ch; margin: 0; color: var(--ink-2); }
+.why-source { margin: 0; font-size: 14px; color: var(--ink-3); }
+.why-source a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.why-source a:hover { color: var(--accent); }
+
+.foot { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink-3); }
+.foot p { margin: 0; }
+.foot .demo { font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+
+@media (min-width: 560px) {
+  .modes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pair.has-before { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+}
+
+@media (min-width: 900px) {
+  .wrap { padding: 28px 32px 48px; }
+  .tool { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 48px; }
+  .stage-inner { position: sticky; top: 16px; max-height: calc(100vh - 32px); margin: -4px; padding: 4px; overflow-y: auto; }
+  .stage-inner .after { margin-top: 16px; }
+  .pair { display: none; }
+  .tally > div { padding: 16px 18px 14px; }
+  .stage-inner .after .hint { display: none; }
+  .stage-inner .after-lines li { padding: 9px 0; }
+  .flow { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .flow li + li { border-top: 0; border-left: 1px solid var(--line); }
+  .hard li { grid-template-columns: 3em minmax(0, 5fr) minmax(0, 6fr); gap: 0 40px; }
+  .hard-answer { grid-column: 3; }
+  .compare { font-size: 15px; }
+  .compare caption, .compare th, .compare td { padding: 12px 16px; }
+  .compare thead th:first-child { width: 22%; }
+  .guards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 40px; }
+  .why-points li { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 0 48px; }
+  .why-points li > :not(.why-stat) { grid-column: 2; }
+  .why-stat { grid-row: 1 / span 2; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .reveal { animation: rise 0.5s var(--ease) both; animation-delay: calc(var(--i, 0) * 80ms); }
+  .skeleton .bar { animation: pulse 1.2s ease-in-out infinite alternate; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pulse {
+    from { opacity: 0.45; }
+    to { opacity: 1; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <noscript><p class="notice">ProofMode needs JavaScript to upload the screenshot and show the results.</p></noscript>
+  <header class="top">
+    <div class="topbar">
+      <p class="brand"><b>Proof</b>Mode</p>
+      <nav class="topnav" aria-label="On this page">
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#hard">Why this is hard</a></li>
+          <li><a href="#different">What makes this different</a></li>
+          <li id="nav-why" hidden><a href="#why">Why this matters</a></li>
+          <li><a href="https://github.com/ankitshah009/proofmode" target="_blank" rel="noopener noreferrer">GitHub<span class="sr-only"> repository (opens in a new tab)</span></a></li>
+        </ul>
+      </nav>
+    </div>
+    <h1>Is this message <em>real?</em></h1>
+    <p class="lede">ProofMode is a fraud check for anyone who gets a suspicious email, text or chat message: drop in a screenshot and each claim in it is checked against common scam red flags, or against the organisation's own official facts.</p>
+  </header>
+
+  <main>
+    <div class="tool">
+      <section class="stage" id="stage" aria-labelledby="stage-title">
+        <div class="stage-inner">
+          <h2 id="stage-title" class="mono-label">1. The message screenshot</h2>
+          <input id="image-input" class="sr-only" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="handling">
+          <label class="drop" id="drop" for="image-input">
+            <span class="drop-title" id="drop-title">Drop, paste or choose a screenshot</span>
+            <span class="hint">Email, SMS or chat. Tap or click here, drop a file, or paste with Ctrl+V or Cmd+V.</span>
+            <span class="hint">PNG, JPEG or WebP, up to 8 MB. The check starts straight away.</span>
+          </label>
+          <p id="status" class="status" aria-live="polite"></p>
+          <div id="error" class="error" role="alert" hidden></div>
+          <figure class="shot" id="shot" hidden>
+            <figcaption><span class="tag">The message</span></figcaption>
+            <img id="preview" alt="Preview of the selected message screenshot">
+          </figure>
+          <div id="after-wide"></div>
+          <p id="handling" class="handling">Sent to the model through OpenRouter. Not stored by this app.</p>
+          <div class="example">
+            <button type="button" class="btn btn-primary" id="load-example">Try the example</button>
+            <p class="hint">No screenshot to hand? Run a full check in one click. The example organisation, Tidewater Cloud, and its message are fictional.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="work">
+        <section aria-labelledby="facts-title">
+          <h2 id="facts-title" class="mono-label">2. Checked against</h2>
+          <fieldset class="modes">
+            <legend class="sr-only">What to check the message against</legend>
+            <label class="mode"><input type="radio" name="mode" id="mode-general" value="general" checked><span>General scam red flags</span></label>
+            <label class="mode"><input type="radio" name="mode" id="mode-org" value="org"><span>This organisation's official facts</span></label>
+          </fieldset>
+
+          <div id="panel-general" class="panel">
+            <p class="hint">No facts needed. The general check catches common scam patterns only. Adding the organisation's own facts gives a stronger check.</p>
+            <ol id="rules" class="rule-list" aria-label="General scam red-flag rules"></ol>
+            <p id="rules-source" class="rule-source" hidden></p>
+          </div>
+
+          <div id="panel-org" class="panel" hidden>
+            <label class="field-label" for="facts">The organisation's official facts, one per line</label>
+            <textarea id="facts" rows="6" spellcheck="false" aria-describedby="facts-hint"></textarea>
+            <p id="facts-hint" class="hint">Take these from the organisation's own website or documents, never from the message itself. A claim that no fact covers is marked as unverifiable, not as false. Leave the box empty to use the general scam red flags.</p>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="check" hidden>Check again</button>
+            <p id="stale" class="hint" hidden>The facts or the mode have changed since this check. Check again to update the verdict.</p>
+          </div>
+
+          <div id="checked-facts" class="checked-facts" hidden>
+            <h3 class="mono-label" id="fact-list-title">Official facts as checked</h3>
+            <ol id="fact-list" class="fact-list" aria-labelledby="fact-list-title"></ol>
+          </div>
+        </section>
+
+        <section id="results" class="results" aria-labelledby="results-title" hidden>
+          <h2 id="results-title" class="results-title" tabindex="-1">3. The verdict</h2>
+          <p id="summary" class="summary"></p>
+          <div id="verdict" class="verdict" role="status" tabindex="-1"></div>
+
+          <dl id="tally" class="tally" hidden>
+            <div id="cell-supported"><dt>Matches the official facts</dt><dd id="n-supported">0</dd></div>
+            <div id="cell-contradicted" class="is-contradicted"><dt>Contradicts the official facts</dt><dd id="n-contradicted">0</dd></div>
+            <div id="cell-insufficient"><dt>Cannot be verified</dt><dd id="n-insufficient">0</dd></div>
+          </dl>
+
+          <div id="pair" class="pair has-before" hidden>
+            <figure class="shot">
+              <figcaption><span class="tag">The message</span></figcaption>
+              <img id="before-copy" alt="The message screenshot as uploaded">
+            </figure>
+            <div id="after-narrow">
+              <article id="after" class="after" aria-labelledby="after-title" hidden>
+                <h3 id="after-title">What the official facts say</h3>
+                <p class="hint">Each claim in the message, with the correct position beside any claim that contradicts it.</p>
+                <ol id="after-lines" class="after-lines"></ol>
+              </article>
+            </div>
+          </div>
+
+          <ol id="claims" class="claims"></ol>
+
+          <div id="notes-block" class="notes-block" hidden>
+            <p class="mono-label">Notes</p>
+            <ul id="notes" class="notes"></ul>
+          </div>
+
+          <div class="again">
+            <button type="button" class="btn" id="recheck">Check again</button>
+            <button type="button" class="btn" id="add-facts" hidden>Add this organisation's facts</button>
+            <p class="hint" id="again-hint">Edit the facts above, then check again.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <details class="trust">
+      <summary>How your screenshot is handled, and what the result means</summary>
+      <ul>
+        <li>The screenshot and the facts or rules are sent to the model through OpenRouter. This app does not store them.</li>
+        <li>Text inside the screenshot is treated as data, never as instructions.</li>
+        <li>The general check catches common scam patterns only. A message that passes it can still be fraudulent.</li>
+        <li>A check against the organisation's own facts is stronger, and depends on the facts you supply.</li>
+        <li>The result is not legal or security advice. Confirm with the organisation through its official channel before you act.</li>
+      </ul>
+    </details>
+
+    <section id="how" class="explain" aria-labelledby="how-title">
+      <h2 id="how-title" class="explain-title">How it works</h2>
+      <p class="explain-lead">Steps 1 and 2 are the input. Step 3 is the only step where the model runs. Steps 4 and 5 are ordinary code that checks the model's answer.</p>
+      <ol class="flow">
+        <li>
+          <div class="flow-head"><span class="flow-n">1</span><span class="who">Input</span></div>
+          <h3 class="flow-title">Screenshot in</h3>
+          <p class="flow-text">Drop, paste or choose a screenshot of the message.</p>
+        </li>
+        <li>
+          <div class="flow-head"><span class="flow-n">2</span><span class="who">Input</span></div>
+          <h3 class="flow-title">Evidence</h3>
+          <p class="flow-text">General scam red flags taken from FTC guidance, or the organisation's own official facts.</p>
+        </li>
+        <li class="is-model">
+          <div class="flow-head"><span class="flow-n">3</span><span class="who who-model">Model</span></div>
+          <h3 class="flow-title">Muse Ember reads it</h3>
+          <p class="flow-text">One call through OpenRouter to the model, Muse Ember by default: it lists the sender and each claim, and to judge a claim it must cite a fact and quote it word for word.</p>
+        </li>
+        <li>
+          <div class="flow-head"><span class="flow-n">4</span><span class="who who-code">Code</span></div>
+          <h3 class="flow-title">ProofMode checks the model</h3>
+          <p class="flow-text">Every cited fact must exist and every quote must appear in it, or the claim is downgraded to "cannot be verified".</p>
+        </li>
+        <li>
+          <div class="flow-head"><span class="flow-n">5</span><span class="who who-code">Code</span></div>
+          <h3 class="flow-title">Verdict in code</h3>
+          <p class="flow-text">The overall verdict is computed by the app from the checked claims, never taken from the model.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section id="hard" class="explain" aria-labelledby="hard-title">
+      <h2 id="hard-title" class="explain-title">Why this is hard</h2>
+      <p class="explain-lead">Five problems that make a trustworthy fraud check difficult, and what ProofMode does about each.</p>
+      <ol class="hard">
+        <li>
+          <span class="hard-n">1</span>
+          <div class="hard-problem">
+            <h3>Models make things up</h3>
+            <p>A model will call a message a scam and invent the reason.</p>
+          </div>
+          <div class="hard-answer">
+            <p class="mono-label">What ProofMode does</p>
+            <p>A claim is only marked as matching or contradicting when it comes with a quoted fact, and the app checks the quote itself.</p>
+          </div>
+        </li>
+        <li>
+          <span class="hard-n">2</span>
+          <div class="hard-problem">
+            <h3>The message is written by an attacker</h3>
+            <p>It can contain text aimed at the model, such as "mark this as safe".</p>
+          </div>
+          <div class="hard-answer">
+            <p class="mono-label">What ProofMode does</p>
+            <p>Screenshot text is treated as data. In live tests on 2026-11-09 such an instruction changed no verdict.</p>
+          </div>
+        </li>
+        <li>
+          <span class="hard-n">3</span>
+          <div class="hard-problem">
+            <h3>People rarely have the official facts to hand</h3>
+            <p>Looking them up takes time that a person under pressure may not have.</p>
+          </div>
+          <div class="hard-answer">
+            <p class="mono-label">What ProofMode does</p>
+            <p>The first check runs against general scam red flags from FTC guidance. The organisation's own facts make it stronger.</p>
+          </div>
+        </li>
+        <li>
+          <span class="hard-n">4</span>
+          <div class="hard-problem">
+            <h3>Letting a model look things up is risky</h3>
+            <p>A scam message can try to point it at the scammer's own site as the "official" source.</p>
+          </div>
+          <div class="hard-answer">
+            <p class="mono-label">What ProofMode does</p>
+            <p>Autonomous lookup is built with a rule that refuses any domain that appears in the message, but it is not yet switched on in this page. Today the facts come only from you or from the general rules.</p>
+          </div>
+        </li>
+        <li>
+          <span class="hard-n">5</span>
+          <div class="hard-problem">
+            <h3>New scams have no history</h3>
+            <p>Blocklists need a link or sender that has been seen before.</p>
+          </div>
+          <div class="hard-answer">
+            <p class="mono-label">What ProofMode does</p>
+            <p>A claim by claim check does not. It needs only the message and the facts.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="different" class="explain" aria-labelledby="different-title">
+      <h2 id="different-title" class="explain-title">What makes this different</h2>
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>Spam filters and link scanners judge where a message comes from. ProofMode judges what it says.</caption>
+          <thead>
+            <tr>
+              <th scope="col"><span class="sr-only">Question</span></th>
+              <th scope="col">Spam filters and link scanners</th>
+              <th scope="col" class="is-ours">ProofMode</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">What is checked</th>
+              <td>Sender, link or attachment reputation</td>
+              <td class="is-ours">The claims the message makes</td>
+            </tr>
+            <tr>
+              <th scope="row">What you get</th>
+              <td>A score or a block</td>
+              <td class="is-ours">Each false claim with the quoted fact that contradicts it</td>
+            </tr>
+            <tr>
+              <th scope="row">A brand-new scam with no known-bad link</th>
+              <td>Often nothing to match</td>
+              <td class="is-ours">Still checked against the facts</td>
+            </tr>
+            <tr>
+              <th scope="row">How to trust it</th>
+              <td>Trust the score</td>
+              <td class="is-ours">Read the quote yourself</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="limits"><b>Limits.</b> Results depend on the facts supplied. A "consistent" result is not proof that a message is genuine. Links and attachments are not scanned. Accuracy beyond the built-in example has not been measured.</p>
+    </section>
+
+    <section id="resist" class="explain" aria-labelledby="resist-title">
+      <h2 id="resist-title" class="explain-title">Built to resist a hostile message</h2>
+      <ul class="guards">
+        <li>
+          <h3>The screenshot is data</h3>
+          <p>Text in the screenshot is treated as data, and instructions in it are not followed. In live tests on 2026-11-09, a screenshot telling the reviewer to mark every claim as supported changed no verdict and was reported as an instruction that was not followed.</p>
+        </li>
+        <li>
+          <h3>Uploads are checked, not kept</h3>
+          <p>Screenshots are checked by content, not by the file type they declare. They are size limited and rate limited, held in memory only, and not stored by this app.</p>
+        </li>
+        <li>
+          <h3>The API key stays on the server</h3>
+          <p>The OpenRouter key is never sent to this page, and the calls to the model are made by the server.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="why" class="why" aria-labelledby="why-title" hidden>
+      <h2 id="why-title" class="mono-label">Why this matters</h2>
+      <p id="why-headline" class="why-headline" hidden></p>
+      <ul id="why-points" class="why-points"></ul>
+    </section>
+  </main>
+
+  <footer id="foot" class="foot" hidden>
+    <p id="foot-model"></p>
+    <p id="foot-demo" class="demo" hidden>Demo mode: canned output</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+  const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+  const EXAMPLE_FACTS = [
+    "Tidewater Cloud credits do not expire.",
+    "Tidewater Cloud never charges a reactivation fee.",
+    "Payments are accepted by card or bank transfer only; gift cards are never accepted.",
+    "Official messages are sent only from tidewater.example and link only to tidewater.example.",
+    "Support is available 24 hours a day, 7 days a week."
+  ].join("\n");
+  // Used only if /baseline.json cannot be loaded: the one rule every build is known to carry.
+  const FALLBACK_BASELINE = {
+    label: "General scam red flags",
+    facts: ["No real business or government agency will ever tell you to buy a gift card to pay them."],
+    links: [{ name: "FTC Consumer Advice: Gift Card Scams", url: "https://consumer.ftc.gov/articles/gift-card-scams" }]
+  };
+  // Wording for each mode. The banner is chosen by the verdict field alone, never inferred from the claims.
+  const WORDING = {
+    org: {
+      labels: {
+        supported: "Matches the official facts",
+        contradicted: "Contradicts the official facts",
+        insufficient_evidence: "Cannot be verified"
+      },
+      basis: "the official facts",
+      unit: "official fact",
+      listTitle: "Official facts as checked",
+      afterTitle: "What the official facts say",
+      says: "The official facts say: ",
+      quote: ["Official fact", "Official facts"],
+      open: "Cannot be verified from the facts supplied",
+      nextStep: "No official fact covers this claim. Add one and check again, or confirm it with the organisation directly.",
+      again: "Edit the facts above, then check again.",
+      checking: "Checking the message against the official facts. This can take a little while.",
+      verdicts: {
+        contradicts_facts: { tone: "is-danger", title: "Do not trust this message" },
+        consistent: {
+          tone: "is-ok",
+          title: "Consistent with the official facts",
+          detail: "This is not proof that the message is genuine. A fraudulent message can repeat true facts, so confirm the sender through the organisation's official channel before you act."
+        },
+        unverified: {
+          tone: "is-open",
+          title: "Not enough facts to judge",
+          detail: "The facts supplied do not settle the claims in this message. Add more official facts and check again."
+        }
+      }
+    },
+    general: {
+      labels: {
+        supported: "In line with the general rules",
+        contradicted: "Scam red flag",
+        insufficient_evidence: "Not covered by the general rules"
+      },
+      basis: "the general scam red-flag rules",
+      unit: "general rule",
+      listTitle: "General rules as checked",
+      afterTitle: "What the general rules say",
+      says: "The general rules say: ",
+      quote: ["General rule", "General rules"],
+      open: "Not covered by the general rules",
+      nextStep: "No general rule covers this claim. Add the organisation's official facts for a stronger check, or confirm it with the organisation directly.",
+      again: "The general check catches common scam patterns only. The organisation's own facts give a stronger check.",
+      checking: "Checking the message against the general scam red flags. This can take a little while.",
+      verdicts: {
+        contradicts_facts: { tone: "is-danger", title: "Do not trust this message" },
+        consistent: {
+          tone: "is-ok",
+          title: "No common scam pattern found",
+          detail: "This is not proof that the message is genuine. The general check catches common scam patterns only. Add the organisation's own facts for a stronger check, and confirm the sender through its official channel before you act."
+        },
+        unverified: {
+          tone: "is-open",
+          title: "The general rules do not settle this",
+          detail: "None of the general scam red flags decides the claims in this message. That does not make it genuine. Add the organisation's own facts for a stronger check."
+        }
+      }
+    }
+  };
+  const BADGE_CLASSES = {
+    supported: "badge-supported",
+    contradicted: "badge-contradicted",
+    insufficient_evidence: "badge-insufficient"
+  };
+  // Mirrors parse_sources on the server: Python splitlines boundaries, then a leading list marker.
+  const LINE_BREAKS = /\r\n|[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029]/;
+  const BULLET = /^(?:[-*\u2022]+|\d+[.)])(?:\s+|$)/;
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  const el = {};
+  [
+    "stage", "drop", "drop-title", "shot", "preview", "image-input", "after-wide", "facts", "load-example",
+    "mode-general", "mode-org", "panel-general", "panel-org", "rules", "rules-source", "fact-list-title",
+    "after-title", "add-facts", "again-hint",
+    "check", "status", "error", "checked-facts", "fact-list", "stale", "results", "results-title",
+    "summary", "verdict", "tally", "n-supported", "n-contradicted", "n-insufficient", "cell-supported",
+    "cell-contradicted", "cell-insufficient", "pair", "before-copy", "after-narrow", "after",
+    "after-lines", "claims", "notes-block", "notes", "recheck", "why", "why-headline", "why-points",
+    "foot", "foot-model", "foot-demo", "nav-why"
+  ].forEach(function (id) {
+    el[id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); })] = document.getElementById(id);
+  });
+  el.image = el.imageInput;
+
+  const wide = window.matchMedia("(min-width: 900px)");
+  let previewUrl = null;
+  let busy = false;
+  let runToken = 0;
+  let controller = null;
+  let baseline = FALLBACK_BASELINE;
+  let checkedSources = null;
+  let checkedMode = "general";
+  let factNodes = new Map();
+
+  function make(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+
+  function tick() {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "tick");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", "M2.5 8.5l3.5 3.5 7.5-8");
+    svg.append(path);
+    return svg;
+  }
+
+  function asArray(value) { return Array.isArray(value) ? value : []; }
+  function cleanText(value) { return typeof value === "string" ? value.trim() : ""; }
+  function setStatus(text) { el.status.textContent = text; }
+  function calmMotion() { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  function wording() { return WORDING[checkedMode]; }
+
+  function setError(text) {
+    el.error.textContent = text || "";
+    el.error.hidden = !text;
+    if (text) el.error.scrollIntoView({ block: "nearest", behavior: calmMotion() ? "auto" : "smooth" });
+  }
+
+  function currentMode() { return el.modeOrg.checked ? "org" : "general"; }
+
+  // The text sent as `sources` for the mode now selected. An empty facts box falls back to the general rules.
+  function activeSources() {
+    const typed = el.facts.value.trim();
+    if (currentMode() === "org" && typed) return { mode: "org", sources: typed };
+    return { mode: "general", sources: baseline.facts.join("\n") };
+  }
+
+  function updateStale() {
+    el.stale.hidden = checkedSources === null || busy || activeSources().sources === checkedSources;
+  }
+
+  function showMode() {
+    const org = currentMode() === "org";
+    el.panelOrg.hidden = !org;
+    el.panelGeneral.hidden = org;
+    updateStale();
+  }
+
+  function selectMode(mode) {
+    (mode === "org" ? el.modeOrg : el.modeGeneral).checked = true;
+    showMode();
+  }
+
+  function externalLink(name, url) {
+    const link = make("a", null, name);
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.append(make("span", "sr-only", " (opens in a new tab)"));
+    return link;
+  }
+
+  function renderBaseline() {
+    el.rules.replaceChildren(...baseline.facts.map(function (fact) { return make("li", null, fact); }));
+    el.rulesSource.replaceChildren();
+    if (baseline.links.length > 0) {
+      el.rulesSource.append(make("span", null, baseline.links.length === 1 ? "Source:" : "Sources:"));
+      baseline.links.forEach(function (link) { el.rulesSource.append(externalLink(link.name, link.url)); });
+    }
+    el.rulesSource.hidden = baseline.links.length === 0;
+  }
+
+  function readLink(name, url) {
+    const cleanUrl = cleanText(url);
+    return cleanUrl.startsWith("https://") ? { name: cleanText(name) || cleanUrl, url: cleanUrl } : null;
+  }
+
+  async function loadBaseline() {
+    try {
+      const response = await fetch("/baseline.json", { credentials: "same-origin" });
+      const body = response.ok ? await readJson(response) : null;
+      // Each rule becomes one line of `sources`, so line breaks inside a rule are flattened.
+      const facts = asArray(body && body.facts)
+        .map(function (fact) { return cleanText(fact).split(LINE_BREAKS).join(" ").trim(); })
+        .filter(Boolean);
+      if (facts.length > 0) {
+        const links = [readLink(body.source_name, body.source_url)];
+        asArray(body.more_sources).forEach(function (extra) {
+          if (extra && typeof extra === "object") links.push(readLink(extra.name, extra.url));
+        });
+        baseline = { label: cleanText(body.label) || FALLBACK_BASELINE.label, facts: facts, links: links.filter(Boolean) };
+      }
+    } catch (_) {
+      // The built-in fallback rule stays in place.
+    }
+    renderBaseline();
+  }
+
+  function setBusy(on) {
+    busy = on;
+    el.check.disabled = on;
+    el.recheck.disabled = on;
+    el.results.setAttribute("aria-busy", on ? "true" : "false");
+    updateStale();
+  }
+
+  function parseFacts(text) {
+    const facts = [];
+    text.split(LINE_BREAKS).forEach(function (line) {
+      const fact = line.trim().replace(BULLET, "").trim();
+      if (fact) facts.push(fact);
+    });
+    return facts;
+  }
+
+  // The official-facts card sits under the screenshot on wide screens and inside the results on phones.
+  function placeAfter() {
+    (wide.matches ? el.afterWide : el.afterNarrow).append(el.after);
+  }
+  wide.addEventListener("change", placeAfter);
+  placeAfter();
+
+  function clearResults() {
+    el.results.hidden = true;
+    el.after.hidden = true;
+    el.pair.hidden = true;
+    el.tally.hidden = true;
+    el.checkedFacts.hidden = true;
+    el.verdict.replaceChildren();
+    el.verdict.className = "verdict";
+    el.claims.replaceChildren();
+    checkedSources = null;
+    el.stale.hidden = true;
+    el.rules.hidden = false;
+  }
+
+  function validateImage(file) {
+    if (!ACCEPTED_TYPES.includes(file.type)) return "Choose a PNG, JPEG or WebP image.";
+    if (file.size > MAX_IMAGE_BYTES) return "That image is larger than 8 MB.";
+    return "";
+  }
+
+  function showPreview(url) {
+    el.shot.hidden = !url;
+    el.check.hidden = !url;
+    el.drop.classList.toggle("is-compact", Boolean(url));
+    el.dropTitle.textContent = url ? "Choose a different screenshot" : "Drop, paste or choose a screenshot";
+    if (url) {
+      el.preview.src = url;
+      el.beforeCopy.src = url;
+    } else {
+      el.preview.removeAttribute("src");
+      el.beforeCopy.removeAttribute("src");
+    }
+  }
+
+  // Choosing, dropping or pasting a screenshot all arrive here, and a valid one is checked at once.
+  el.image.addEventListener("change", function () {
+    setError("");
+    cancelRun();
+    clearResults();
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrl = null;
+    }
+    const file = el.image.files[0];
+    if (!file) {
+      showPreview(null);
+      return;
+    }
+    const problem = validateImage(file);
+    if (problem) {
+      el.image.value = "";
+      showPreview(null);
+      setError(problem);
+      return;
+    }
+    previewUrl = URL.createObjectURL(file);
+    showPreview(previewUrl);
+    runCheck();
+  });
+
+  function setFile(file) {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    el.image.files = transfer.files;
+    el.image.dispatchEvent(new Event("change"));
+  }
+
+  function hasFiles(event) {
+    return Boolean(event.dataTransfer) && Array.from(event.dataTransfer.types || []).includes("Files");
+  }
+
+  // A file can be dropped anywhere on the page, not only on the drop zone.
+  ["dragenter", "dragover"].forEach(function (type) {
+    document.addEventListener(type, function (event) {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      el.stage.classList.add("is-over");
+    });
+  });
+  document.addEventListener("dragleave", function (event) {
+    if (!event.relatedTarget) el.stage.classList.remove("is-over");
+  });
+  document.addEventListener("drop", function (event) {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    el.stage.classList.remove("is-over");
+    const file = event.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  function clipboardImage(data) {
+    if (!data) return null;
+    const files = Array.from(data.files || []);
+    Array.from(data.items || []).forEach(function (item) {
+      if (files.length === 0 && item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    });
+    return files.find(function (file) { return file.type.startsWith("image/"); }) || null;
+  }
+
+  // Paste works anywhere on the page. Pasted text still reaches the facts box as usual.
+  document.addEventListener("paste", function (event) {
+    const file = clipboardImage(event.clipboardData);
+    if (!file) return;
+    event.preventDefault();
+    setFile(file);
+  });
+
+  el.loadExample.addEventListener("click", async function () {
+    setError("");
+    el.facts.value = EXAMPLE_FACTS;
+    selectMode("org");
+    setStatus("Loading the fictional example message.");
+    el.loadExample.disabled = true;
+    try {
+      const response = await fetch("/sample.png", { credentials: "same-origin" });
+      if (!response.ok) throw new Error("sample unavailable");
+      const blob = await response.blob();
+      setFile(new File([blob], "tidewater-cloud-message.png", { type: "image/png" }));
+    } catch (_) {
+      setStatus("");
+      setError("The example screenshot could not be loaded. Its official facts are filled in, so choose a screenshot to check.");
+    } finally {
+      el.loadExample.disabled = false;
+    }
+  });
+
+  el.facts.addEventListener("input", updateStale);
+  el.modeGeneral.addEventListener("change", showMode);
+  el.modeOrg.addEventListener("change", showMode);
+  el.check.addEventListener("click", runCheck);
+  el.recheck.addEventListener("click", runCheck);
+  el.addFacts.addEventListener("click", function () {
+    selectMode("org");
+    el.facts.focus();
+  });
+
+  async function readJson(response) {
+    try { return await response.json(); } catch (_) { return null; }
+  }
+
+  // Retry-After is either a number of seconds or an HTTP date.
+  function retrySeconds(response) {
+    const raw = (response.headers.get("Retry-After") || "").trim();
+    if (/^\d+$/.test(raw)) return Number(raw);
+    const when = raw ? Date.parse(raw) : NaN;
+    return Number.isNaN(when) ? null : Math.max(1, Math.ceil((when - Date.now()) / 1000));
+  }
+
+  function errorMessage(response, body) {
+    if (response.status === 429) {
+      const seconds = retrySeconds(response);
+      return "Too many checks in a short time. " + (seconds === null
+        ? "Wait a moment, then try again."
+        : "Wait " + plural(Math.max(1, seconds), "second") + ", then try again.");
+    }
+    if (response.status === 413) return "That screenshot is too large to check. Use an image under 8 MB.";
+    if (response.status === 415) return "That file type is not supported. Choose a PNG, JPEG or WebP screenshot.";
+    if (body && typeof body.detail === "string" && body.detail) return body.detail;
+    return "The check failed (HTTP " + response.status + "). Please try again.";
+  }
+
+  // A newer screenshot replaces a check that is still in flight; the older reply is discarded.
+  function cancelRun() {
+    runToken += 1;
+    if (controller) controller.abort();
+    controller = null;
+    if (busy) setBusy(false);
+  }
+
+  async function runCheck() {
+    cancelRun();
+    const token = runToken;
+    setError("");
+
+    const file = el.image.files[0];
+    if (!file) {
+      setError("Choose a screenshot of the message first.");
+      el.image.focus();
+      return;
+    }
+    const problem = validateImage(file);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
+    setBusy(true);
+    await baselineReady;
+    if (token !== runToken) return;
+
+    const active = activeSources();
+    const fellBack = currentMode() === "org" && active.mode === "general";
+    if (fellBack) selectMode("general");
+    checkedMode = active.mode;
+
+    const form = new FormData();
+    form.append("image", file, file.name);
+    form.append("sources", active.sources);
+
+    showSkeleton();
+    setStatus((fellBack ? "No official facts were entered, so the general scam red flags are used. " : "") + wording().checking);
+    controller = new AbortController();
+    try {
+      const response = await fetch("/api/review", {
+        method: "POST",
+        body: form,
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        signal: controller.signal
+      });
+      const body = await readJson(response);
+      if (token !== runToken) return;
+      if (!response.ok) {
+        throw new Error(errorMessage(response, body));
+      }
+      // Status first: its height changes, and the verdict is scrolled into place after that.
+      setStatus("Check complete.");
+      renderReview(body, active.sources);
+    } catch (err) {
+      if (token !== runToken) return;
+      setStatus("");
+      clearResults();
+      if (err instanceof TypeError) {
+        setError("Could not reach the ProofMode server. Check that it is running and try again.");
+      } else {
+        setError(err && err.message ? err.message : "Something went wrong. Please try again.");
+      }
+    } finally {
+      if (token === runToken) {
+        controller = null;
+        setBusy(false);
+      }
+    }
+  }
+
+  function showSkeleton() {
+    clearResults();
+    el.results.hidden = false;
+    el.summary.textContent = "";
+    el.notesBlock.hidden = true;
+    el.claims.replaceChildren(...[0, 1, 2].map(function () {
+      const item = make("li", "card skeleton");
+      item.setAttribute("aria-hidden", "true");
+      item.append(make("span", "bar bar-short"), make("span", "bar"), make("span", "bar bar-long"));
+      return item;
+    }));
+  }
+
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+
+  function renderVerdict(verdict, contradicted) {
+    const verdicts = wording().verdicts;
+    const known = typeof verdict === "string" && Object.prototype.hasOwnProperty.call(verdicts, verdict)
+      ? verdicts[verdict] : null;
+    el.verdict.className = "verdict" + (known ? " " + known.tone : "");
+    el.verdict.replaceChildren();
+    if (!known) return;
+    const detail = verdict !== "contradicts_facts" ? known.detail : (contradicted > 0
+      ? plural(contradicted, "claim") + " in this message " + (contradicted === 1 ? "contradicts" : "contradict")
+      : "This message contradicts") + " " + wording().basis + ".";
+    el.verdict.replaceChildren(make("p", "verdict-title", known.title), make("p", "verdict-detail", detail));
+  }
+
+  function renderTally(claims) {
+    const counts = { supported: 0, contradicted: 0, insufficient_evidence: 0 };
+    claims.forEach(function (claim) {
+      if (Object.prototype.hasOwnProperty.call(counts, claim.status)) counts[claim.status] += 1;
+    });
+    [
+      [el.nSupported, el.cellSupported, counts.supported, "supported"],
+      [el.nContradicted, el.cellContradicted, counts.contradicted, "contradicted"],
+      [el.nInsufficient, el.cellInsufficient, counts.insufficient_evidence, "insufficient_evidence"]
+    ].forEach(function (row) {
+      row[0].textContent = String(row[2]);
+      row[1].classList.toggle("is-zero", row[2] === 0);
+      row[1].querySelector("dt").textContent = wording().labels[row[3]];
+    });
+    el.tally.hidden = claims.length === 0;
+    return counts.contradicted;
+  }
+
+  function renderFacts(sources) {
+    factNodes = new Map();
+    el.factList.replaceChildren(...parseFacts(sources).map(function (fact, index) {
+      const id = "S" + (index + 1);
+      const item = make("li");
+      item.id = "fact-" + id;
+      item.append(make("span", "fact-id", id), make("span", null, fact));
+      factNodes.set(id, item);
+      return item;
+    }));
+    el.factListTitle.textContent = wording().listTitle;
+    // The same rules are listed below with their ids, so the preview list steps aside.
+    el.rules.hidden = checkedMode === "general";
+    el.checkedFacts.hidden = false;
+  }
+
+  function citeFact(id, scroll) {
+    factNodes.forEach(function (node, key) {
+      node.classList.toggle("is-cited", key === id);
+    });
+    const target = factNodes.get(id);
+    if (target && scroll) {
+      target.scrollIntoView({ block: "nearest", behavior: calmMotion() ? "auto" : "smooth" });
+    }
+  }
+
+  function sourceRef(id) {
+    if (!factNodes.has(id)) return make("span", null, id);
+    const button = make("button", "src", id);
+    button.type = "button";
+    button.setAttribute("aria-label", id + ", show this line in the list that was checked");
+    button.setAttribute("aria-describedby", "fact-" + id);
+    button.addEventListener("focus", function () { citeFact(id, false); });
+    button.addEventListener("mouseenter", function () { citeFact(id, false); });
+    button.addEventListener("click", function () { citeFact(id, true); });
+    return button;
+  }
+
+  function sourceLine(tag, className, label, ids) {
+    const line = make(tag, className);
+    line.append(make("span", null, label));
+    ids.forEach(function (id) { line.append(sourceRef(id)); });
+    return line;
+  }
+
+  function reveal(node, index) {
+    node.classList.add("reveal");
+    node.style.setProperty("--i", String(Math.min(index, 12)));
+    return node;
+  }
+
+  function renderReview(review, sources) {
+    const claims = asArray(review && review.claims).filter(function (claim) {
+      return claim && typeof claim === "object";
+    });
+    const notes = asArray(review && review.notes);
+    const factCount = parseFacts(sources).length;
+
+    checkedSources = sources;
+    renderFacts(sources);
+    el.summary.textContent = claims.length === 0
+      ? "No claims were found to check."
+      : "Checked " + plural(claims.length, "claim") + " against " + plural(factCount, wording().unit) + ".";
+    renderVerdict(review && review.verdict, renderTally(claims));
+    renderAfter(claims);
+
+    if (claims.length === 0) {
+      el.claims.replaceChildren(make("li", "card", "No checkable claims were found in the screenshot."));
+    } else {
+      el.claims.replaceChildren(...claims.map(function (claim, index) {
+        return renderClaim(claim, index, claims.length);
+      }));
+    }
+
+    el.notes.replaceChildren(...notes.map(function (note) {
+      return make("li", null, String(note));
+    }));
+    el.notesBlock.hidden = notes.length === 0;
+
+    if (review && typeof review.model === "string" && review.model.trim()) {
+      showModel(review.model.trim());
+    }
+    el.afterTitle.textContent = wording().afterTitle;
+    el.againHint.textContent = wording().again;
+    el.addFacts.hidden = checkedMode !== "general";
+    el.recheck.hidden = checkedMode === "general";
+    el.pair.hidden = false;
+    el.results.hidden = false;
+    updateStale();
+
+    // Bring the answer to the reader: focus the verdict banner and scroll it into view.
+    const target = el.verdict.childElementCount > 0 ? el.verdict : el.resultsTitle;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: "start", behavior: calmMotion() ? "auto" : "smooth" });
+  }
+
+  function flag(className, text, withTick) {
+    const node = make("span", "flag " + className);
+    if (withTick) node.append(tick());
+    node.append(make("span", null, text));
+    return node;
+  }
+
+  function renderAfter(claims) {
+    if (claims.length === 0) {
+      el.afterLines.replaceChildren(make("li", null, "No claims to compare."));
+      el.after.hidden = false;
+      return;
+    }
+    el.afterLines.replaceChildren(...claims.map(function (claim, index) {
+      const item = reveal(make("li"), index);
+      const text = String(claim.claim_text || "");
+      const correction = cleanText(claim.correction);
+      if (claim.status === "contradicted") {
+        const was = make("del", "was");
+        was.append(make("span", "sr-only", "The message says: "), text);
+        item.append(was);
+        if (correction) {
+          const now = make("ins", "now");
+          now.append(make("span", "sr-only", wording().says), correction);
+          item.append(now);
+        }
+        item.append(flag("flag-bad", wording().labels.contradicted));
+      } else if (claim.status === "supported") {
+        item.append(make("span", "now", text), flag("flag-ok", wording().labels.supported, true));
+      } else {
+        item.append(make("span", "now", text), flag("flag-open", wording().open));
+      }
+      return item;
+    }));
+    el.after.hidden = false;
+  }
+
+  function renderClaim(claim, index, total) {
+    const labels = wording().labels;
+    const status = Object.prototype.hasOwnProperty.call(labels, claim.status) ? claim.status : null;
+    const item = reveal(make("li", "card" + (status === "contradicted" ? " is-contradicted" : "")), index);
+
+    const head = make("div", "card-head");
+    const badge = make("span", "badge " + (status ? BADGE_CLASSES[status] : "badge-unknown"));
+    if (status === "supported") badge.append(tick());
+    badge.append(make("span", null, status ? labels[status] : "Status not recognised"));
+    head.append(badge, make("span", "mono-label", "Claim " + (index + 1) + " of " + total));
+    item.append(head);
+    item.append(make("h3", "claim-text", String(claim.claim_text || "")));
+
+    const explanation = cleanText(claim.explanation);
+    if (explanation) item.append(make("p", "explanation", explanation));
+
+    const quotes = asArray(claim.evidence_quotes).map(String).filter(Boolean);
+    const sourceIds = asArray(claim.source_ids).map(function (id) { return String(id).trim(); }).filter(Boolean);
+    if (quotes.length > 0) {
+      item.append(make("p", "mono-label", wording().quote[quotes.length === 1 ? 0 : 1]));
+      quotes.forEach(function (quote, quoteIndex) {
+        let id = "";
+        if (sourceIds.length === quotes.length) {
+          id = sourceIds[quoteIndex];
+        } else if (sourceIds.length === 1) {
+          id = sourceIds[0];
+        }
+        const quoteBlock = make("blockquote");
+        quoteBlock.append(make("p", null, quote));
+        if (id) quoteBlock.append(sourceLine("footer", null, "Source", [id]));
+        item.append(quoteBlock);
+      });
+      if (sourceIds.length > 1 && sourceIds.length !== quotes.length) {
+        item.append(sourceLine("p", "sources", "Sources", sourceIds));
+      }
+    } else if (sourceIds.length > 0) {
+      item.append(sourceLine("p", "sources", "Sources", sourceIds));
+    }
+
+    const correction = cleanText(claim.correction);
+    if (claim.status === "contradicted" && correction) {
+      item.append(make("p", "mono-label", wording().afterTitle));
+      item.append(make("p", "correction", correction));
+    } else if (claim.status === "insufficient_evidence") {
+      item.append(make("p", "next-step", wording().nextStep));
+    }
+
+    return item;
+  }
+
+  function showModel(model) {
+    el.footModel.textContent = "Checked by " + model + " through OpenRouter";
+    el.foot.hidden = false;
+  }
+
+  async function loadHealth() {
+    try {
+      const response = await fetch("/api/health", { credentials: "same-origin" });
+      const body = response.ok ? await readJson(response) : null;
+      if (!body) return;
+      const model = cleanText(body.model);
+      if (model) showModel(model);
+      if (body.mock === true) {
+        el.footDemo.hidden = false;
+        el.foot.hidden = false;
+      }
+    } catch (_) {
+      // The footer stays hidden when the health probe is unavailable.
+    }
+  }
+
+  function renderPoint(point) {
+    const stat = cleanText(point.stat);
+    const text = cleanText(point.text);
+    if (!stat && !text) return null;
+    const item = make("li");
+    if (stat) item.append(make("p", "why-stat", stat));
+    if (text) item.append(make("p", "why-text", text));
+
+    const url = cleanText(point.source_url);
+    const name = cleanText(point.source_name);
+    if (url.startsWith("https://") || name) {
+      const source = make("p", "why-source");
+      if (url.startsWith("https://")) {
+        source.append(externalLink("Source: " + (name || url), url));
+      } else {
+        source.textContent = "Source: " + name;
+      }
+      item.append(source);
+    }
+    return item;
+  }
+
+  async function loadWhy() {
+    try {
+      const response = await fetch("/why.json", { credentials: "same-origin" });
+      const body = response.ok ? await readJson(response) : null;
+      const points = asArray(body && body.points)
+        .filter(function (point) { return point && typeof point === "object"; })
+        .map(renderPoint)
+        .filter(Boolean);
+      if (points.length === 0) return;
+      const headline = cleanText(body.headline);
+      el.whyHeadline.textContent = headline;
+      el.whyHeadline.hidden = !headline;
+      el.whyPoints.replaceChildren(...points);
+      el.why.hidden = false;
+      el.navWhy.hidden = false;
+    } catch (_) {
+      // The section stays hidden when the file is missing or malformed.
+    }
+  }
+
+  const baselineReady = loadBaseline();
+  showMode();
+  loadHealth();
+  loadWhy();
+})();
+</script>
+</body>
+</html>

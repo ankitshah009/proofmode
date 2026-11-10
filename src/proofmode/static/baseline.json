@@ -1,0 +1,20 @@
+{
+  "label": "General scam red flags",
+  "source_name": "FTC: How to Avoid a Scam",
+  "source_url": "https://consumer.ftc.gov/articles/how-avoid-scam",
+  "more_sources": [
+    {
+      "name": "FTC: Gift Card Scams",
+      "url": "https://consumer.ftc.gov/articles/gift-card-scams"
+    }
+  ],
+  "facts": [
+    "No real business or government agency will ever tell you to buy a gift card to pay them.",
+    "Only scammers will tell you to buy a gift card and give them the numbers off the back of the card.",
+    "Government agencies will not contact you to demand immediate payment, and they never demand payment by gift card.",
+    "Honest organizations will not call, email, or text to ask for your personal information, like your Social Security, bank account, or credit card numbers.",
+    "Honest businesses will give you time to make a decision. Anyone who pressures you to pay or give them your personal information is a scammer.",
+    "Scammers insist that you can only pay with cryptocurrency, a wire transfer service, a payment app, or a gift card. Never pay someone who insists on paying that way.",
+    "Scammers pressure you to act immediately, and might threaten to arrest you, sue you, take away your driver's or business license, or deport you."
+  ]
+}

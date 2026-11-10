@@ -1,0 +1,17 @@
+{
+  "objectClassName": "domain",
+  "ldhName": "tidewater-accounts.co",
+  "status": ["active"],
+  "events": [
+    {"eventAction": "registration", "eventDate": "{{REGISTERED}}"},
+    {"eventAction": "expiration", "eventDate": "2027-11-02T00:00:00Z"}
+  ],
+  "entities": [
+    {
+      "objectClassName": "entity",
+      "handle": "9999",
+      "roles": ["registrar"],
+      "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "Example Registrar"]]]
+    }
+  ]
+}
